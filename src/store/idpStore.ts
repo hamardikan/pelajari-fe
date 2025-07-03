@@ -19,11 +19,19 @@ interface IDPState {
   isAnalyzing: boolean
   analysisProgress: number
 
+  // 9-Box Mapping
+  nineBoxData: any | null
+  isLoadingNineBox: boolean
+
   // IDP Management
   currentIDP: IndividualDevelopmentPlan | null
   teamIDPs: IndividualDevelopmentPlan[]
   isLoadingIDP: boolean
   isGeneratingIDP: boolean
+
+  // Generated IDs from one-shot analysis
+  generatedAnalysisId: string | null
+  generatedIdpId: string | null
 
   // Development Programs
   developmentPrograms: Record<string, unknown>[]
@@ -44,6 +52,10 @@ interface IDPState {
   fetchGapAnalysis: (employeeId: string) => Promise<void>
   clearGapAnalysis: () => void
 
+  // 9-Box actions
+  fetchNineBoxData: (employeeId: string) => Promise<void>
+  clearNineBoxData: () => void
+
   // IDP actions
   generateIDP: (employeeId: string) => Promise<void>
   fetchIDP: (employeeId: string) => Promise<void>
@@ -58,6 +70,115 @@ interface IDPState {
   fetchIDPAnalytics: (filters?: Record<string, unknown>) => Promise<void>
 }
 
+// Helper to convert API analysis format (with nested data object) to UI-friendly GapAnalysis
+const flattenGapAnalysis = (apiAnalysis: any): GapAnalysis => {
+  if (!apiAnalysis) return apiAnalysis
+
+  // Real backend structure has analysis.data containing the actual data
+  const analysisData = apiAnalysis.data || {}
+
+  // Extract priority areas from gaps where priority is "High"
+  const priorityAreas = analysisData.gaps
+    ? analysisData.gaps
+        .filter((gap: any) => gap.priority?.toLowerCase() === 'high')
+        .map((gap: any) => gap.competency)
+    : []
+
+  // Create nine box position from the data
+  const nineBoxPosition = {
+    performance: analysisData.kpiScore >= 80 ? 'high' : analysisData.kpiScore >= 60 ? 'medium' : 'low',
+    potential: analysisData.potentialScore >= 80 ? 'high' : analysisData.potentialScore >= 60 ? 'medium' : 'low',
+    category: analysisData.nineBoxClassification?.toLowerCase().replace(' ', '_') || 'unknown',
+    description: `${analysisData.nineBoxClassification || 'Employee'} with KPI score of ${analysisData.kpiScore || 0}% and potential score of ${analysisData.potentialScore || 0}%`,
+    developmentFocus: priorityAreas.slice(0, 3) // Top 3 priority areas
+  }
+
+  // Transform gaps to match expected format
+  const transformedGaps = analysisData.gaps?.map((gap: any) => ({
+    competencyId: gap.competency?.toLowerCase().replace(/\s+/g, '_') || '',
+    competencyName: gap.competency || '',
+    category: gap.category || '',
+    requiredLevel: gap.requiredLevel || '',
+    currentLevel: gap.currentLevel || '',
+    gapSize: gap.gapLevel || 0,
+    priority: gap.priority?.toLowerCase() || 'medium',
+    impactOnRole: gap.description || '',
+    developmentSuggestions: [],
+    description: gap.description || ''
+  })) || []
+
+  // Transform recommendations
+  const transformedRecommendations = analysisData.recommendations?.map((rec: string, index: number) => ({
+    type: 'training' as const,
+    title: `Recommendation ${index + 1}`,
+    description: rec,
+    estimatedDuration: '3-6 months',
+    priority: index + 1,
+    resources: []
+  })) || []
+
+  return {
+    id: apiAnalysis.id || '',
+    employeeId: analysisData.employeeId || '',
+    frameworkId: '',
+    assessmentId: '',
+    gaps: transformedGaps,
+    overallGapScore: analysisData.overallGapScore || 0,
+    priorityAreas,
+    recommendations: transformedRecommendations,
+    nineBoxPosition,
+    createdAt: apiAnalysis.createdAt || '',
+  } as GapAnalysis
+}
+
+// Helper to convert API IDP format to UI-friendly IndividualDevelopmentPlan
+const flattenIDPData = (apiIDP: any): IndividualDevelopmentPlan => {
+  if (!apiIDP) return apiIDP
+
+  const idpData = apiIDP.data || {}
+
+  // Transform development goals
+  const transformedGoals = idpData.developmentGoals?.map((goal: any) => ({
+    id: goal.id || '',
+    competencyId: goal.competency?.toLowerCase().replace(/\s+/g, '_') || '',
+    competencyName: goal.competency || '',
+    currentLevel: goal.currentLevel || '',
+    targetLevel: goal.targetLevel || '',
+    priority: goal.priority?.toLowerCase() || 'medium',
+    timeframe: goal.timeframe || '',
+    activities: goal.programs?.map((program: any) => ({
+      id: program.programId || '',
+      type: program.type?.toLowerCase().replace(/\s+/g, '_') || 'training',
+      title: program.programName || '',
+      description: goal.description || '',
+      resourceId: program.programId,
+      estimatedHours: 40, // Default estimate
+      actualHours: 0,
+      status: program.status?.toLowerCase().replace(/\s+/g, '_') || 'not_started',
+      completionDate: undefined,
+      feedback: undefined
+    })) || [],
+    successMetrics: goal.successMetrics || [],
+    progress: goal.programs?.reduce((acc: number, p: any) => acc + (p.completionPercentage || 0), 0) / (goal.programs?.length || 1) || 0,
+    status: goal.programs?.some((p: any) => p.status === 'Completed') ? 'completed' :
+            goal.programs?.some((p: any) => p.status === 'In Progress') ? 'in_progress' : 'not_started'
+  })) || []
+
+  return {
+    id: apiIDP.id || '',
+    employeeId: idpData.employeeId || '',
+    managerId: idpData.createdBy || '',
+    gapAnalysisId: idpData.gapAnalysisId || '',
+    status: idpData.overallProgress?.status?.toLowerCase().replace(/\s+/g, '_') || 'draft',
+    startDate: apiIDP.createdAt || new Date().toISOString(),
+    targetCompletionDate: idpData.nextReviewDate || '',
+    goals: transformedGoals,
+    overallProgress: idpData.overallProgress?.completionPercentage || 0,
+    lastUpdated: apiIDP.updatedAt || apiIDP.createdAt || '',
+    approvalHistory: []
+  } as IndividualDevelopmentPlan
+}
+
 export const useIDPStore = create<IDPState>()(
   subscribeWithSelector((set, get) => ({
     // Initial state
@@ -67,10 +188,14 @@ export const useIDPStore = create<IDPState>()(
     gapAnalysis: null,
     isAnalyzing: false,
     analysisProgress: 0,
+    nineBoxData: null,
+    isLoadingNineBox: false,
     currentIDP: null,
     teamIDPs: [],
     isLoadingIDP: false,
     isGeneratingIDP: false,
+    generatedAnalysisId: null,
+    generatedIdpId: null,
     developmentPrograms: [],
     isLoadingPrograms: false,
     idpAnalytics: null,
@@ -133,9 +258,16 @@ export const useIDPStore = create<IDPState>()(
         clearInterval(progressInterval)
         set({ analysisProgress: 100 })
 
-        if (response.success) {
+        if (response.success && response.data) {
+          // New backend returns both analysisId and idpId, plus the actual data
+          const responseData = response.data as any
+          
           set({
-            gapAnalysis: response.data.analysis,
+            gapAnalysis: responseData.analysis ? flattenGapAnalysis(responseData.analysis) : null,
+            nineBoxData: responseData.analysis?.nineBoxPosition || null,
+            currentIDP: responseData.idp || null,
+            generatedAnalysisId: responseData.analysisId,
+            generatedIdpId: responseData.idpId,
             isAnalyzing: false
           })
         }
@@ -149,8 +281,12 @@ export const useIDPStore = create<IDPState>()(
     fetchGapAnalysis: async (employeeId: string) => {
       try {
         const response = await idpService.getGapAnalysis(employeeId)
-        if (response.success) {
-          set({ gapAnalysis: response.data.analysis })
+        if (response.success && response.data) {
+          const analysisData = flattenGapAnalysis((response.data as any).analysis)
+          set({ 
+            gapAnalysis: analysisData,
+            nineBoxData: analysisData?.nineBoxPosition || null
+          })
         }
       } catch (error) {
         console.error('Failed to fetch gap analysis:', error)
@@ -158,7 +294,38 @@ export const useIDPStore = create<IDPState>()(
     },
 
     clearGapAnalysis: () => {
-      set({ gapAnalysis: null, analysisProgress: 0 })
+      set({ 
+        gapAnalysis: null, 
+        analysisProgress: 0,
+        nineBoxData: null,
+        currentIDP: null,
+        generatedAnalysisId: null,
+        generatedIdpId: null
+      })
+    },
+
+    // 9-Box actions
+    fetchNineBoxData: async (employeeId: string) => {
+      try {
+        set({ isLoadingNineBox: true })
+        // If we already have nine box data from gap analysis, use it
+        const { nineBoxData } = get()
+        if (nineBoxData) {
+          set({ isLoadingNineBox: false })
+          return
+        }
+        
+        // Otherwise fetch gap analysis which should include nine box data
+        await get().fetchGapAnalysis(employeeId)
+      } catch (error) {
+        console.error('Failed to fetch nine box data:', error)
+      } finally {
+        set({ isLoadingNineBox: false })
+      }
+    },
+
+    clearNineBoxData: () => {
+      set({ nineBoxData: null })
     },
 
     // IDP actions
@@ -168,10 +335,10 @@ export const useIDPStore = create<IDPState>()(
         
         const response = await idpService.generateIDP(employeeId)
         
-        if (response.success) {
+        if (response.success && response.data && (response.data as any).idp) {
           set({ 
-            currentIDP: response.data.idp,
-            isGeneratingIDP: false 
+            currentIDP: (response.data as any).idp,
+            isGeneratingIDP: false
           })
         }
       } catch (error) {
@@ -185,8 +352,8 @@ export const useIDPStore = create<IDPState>()(
       try {
         set({ isLoadingIDP: true })
         const response = await idpService.getIDP(employeeId)
-        if (response.success) {
-          set({ currentIDP: response.data.idp })
+        if (response.success && response.data) {
+          set({ currentIDP: flattenIDPData((response.data as any).idp) })
         }
       } catch (error) {
         console.error('Failed to fetch IDP:', error)
@@ -266,8 +433,8 @@ export const useIDPStore = create<IDPState>()(
       try {
         set({ isLoadingPrograms: true })
         const response = await idpService.getDevelopmentPrograms(filters as Parameters<typeof idpService.getDevelopmentPrograms>[0])
-        if (response.success) {
-          set({ developmentPrograms: response.data.programs })
+        if (response.success && response.data) {
+          set({ developmentPrograms: (response.data as any).programs })
         }
       } catch (error) {
         console.error('Failed to fetch development programs:', error)
@@ -281,7 +448,7 @@ export const useIDPStore = create<IDPState>()(
       try {
         set({ isLoadingAnalytics: true })
         const response = await idpService.getIDPAnalytics(filters as Parameters<typeof idpService.getIDPAnalytics>[0])
-        if (response.success) {
+        if (response.success && response.data) {
           set({ idpAnalytics: response.data })
         }
       } catch (error) {

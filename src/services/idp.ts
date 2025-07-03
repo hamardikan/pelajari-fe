@@ -1,4 +1,5 @@
 import { apiClient } from './api'
+import { ApiResponse } from '@/types'
 
 export interface CompetencyFramework {
   id: string
@@ -177,13 +178,31 @@ class IDPService {
   async performGapAnalysis(data: {
     frameworkFile: File
     employeeFile: File
+    employeeId?: string
+    metadata?: Record<string, unknown> | string
   }) {
     try {
         const formData = new FormData()
         formData.append('frameworkFile', data.frameworkFile)
         formData.append('employeeFile', data.employeeFile)
 
-        const response = await apiClient.post('/api/idp/gap-analysis', formData, {
+        if (data.employeeId) {
+          formData.append('employeeId', data.employeeId)
+        }
+
+        if (data.metadata) {
+          const metaValue = typeof data.metadata === 'string' ? data.metadata : JSON.stringify(data.metadata)
+          formData.append('metadata', metaValue)
+        }
+
+        const response = await apiClient.post<ApiResponse<{ 
+          analysisId: string
+          idpId: string
+          status: string
+          message: string
+          analysis?: GapAnalysis
+          idp?: IndividualDevelopmentPlan
+        }>>('/api/idp/gap-analysis', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
         return { success: true, data: response.data }
@@ -195,7 +214,7 @@ class IDPService {
 
   async getGapAnalysis(employeeId: string) {
     try {
-      const response = await apiClient.get(`/api/idp/gap-analysis/${employeeId}`)
+      const response = await apiClient.get<ApiResponse<{ analysis: GapAnalysis }>>(`/api/idp/gap-analysis/${employeeId}`)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to fetch gap analysis:', error)
@@ -206,7 +225,7 @@ class IDPService {
   // Nine Box Grid
   async mapToNineBox(employeeId: string, data: { kpiScore: number; assessmentScore: number }) {
     try {
-      const response = await apiClient.post(`/api/idp/employees/${employeeId}/nine-box`, data)
+      const response = await apiClient.post<ApiResponse<{ classification: string }>>(`/api/idp/employees/${employeeId}/nine-box`, data)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to map to nine box:', error)
@@ -217,7 +236,7 @@ class IDPService {
   // IDP Management
   async generateIDP(employeeId: string) {
     try {
-      const response = await apiClient.post(`/api/idp/generate/${employeeId}`)
+      const response = await apiClient.post<ApiResponse<{ idpId: string; idp?: IndividualDevelopmentPlan; status: string; message: string }>>(`/api/idp/generate/${employeeId}`)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to generate IDP:', error)
@@ -227,7 +246,7 @@ class IDPService {
 
   async getIDP(employeeId: string) {
     try {
-      const response = await apiClient.get(`/api/idp/employees/${employeeId}`)
+      const response = await apiClient.get<ApiResponse<{ idp: IndividualDevelopmentPlan }>>(`/api/idp/employees/${employeeId}`)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to fetch IDP:', error)
@@ -237,7 +256,7 @@ class IDPService {
 
   async approveIDP(idpId: string) {
     try {
-      const response = await apiClient.put(`/api/idp/${idpId}/approve`)
+      const response = await apiClient.put<ApiResponse<{ message: string }>>(`/api/idp/${idpId}/approve`)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to approve IDP:', error)
@@ -250,7 +269,7 @@ class IDPService {
     completionPercentage: number
   }) {
     try {
-      const response = await apiClient.put(`/api/idp/${idpId}/progress`, progress)
+      const response = await apiClient.put<ApiResponse<{ progress: number }>>(`/api/idp/${idpId}/progress`, progress)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to update IDP progress:', error)
@@ -260,7 +279,7 @@ class IDPService {
 
   async updateIDP(idpId: string, updates: Partial<IndividualDevelopmentPlan>) {
     try {
-      const response = await apiClient.put(`/api/idp/${idpId}`, updates)
+      const response = await apiClient.put<ApiResponse<{ idp: IndividualDevelopmentPlan }>>(`/api/idp/${idpId}`, updates)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to update IDP:', error)
@@ -271,7 +290,7 @@ class IDPService {
   // Impact Measurement
   async measureIDPImpact(employeeId: string) {
     try {
-      const response = await apiClient.get(`/api/idp/employees/${employeeId}/impact`)
+      const response = await apiClient.get<ApiResponse<{ impact: unknown }>>(`/api/idp/employees/${employeeId}/impact`)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to measure IDP impact:', error)
@@ -292,7 +311,7 @@ class IDPService {
           if (value) params.append(key, value)
         })
       }
-      const response = await apiClient.get(`/api/idp/programs?${params}`)
+      const response = await apiClient.get<ApiResponse<{ programs: any[] }>>(`/api/idp/programs?${params}`)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to fetch development programs:', error)
@@ -311,7 +330,7 @@ class IDPService {
     cost?: number
   }) {
     try {
-      const response = await apiClient.post('/api/idp/programs', program)
+      const response = await apiClient.post<ApiResponse<{ programId: string }>>('/api/idp/programs', program)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to create development program:', error)
@@ -338,7 +357,7 @@ class IDPService {
           }
         })
       }
-      const response = await apiClient.get(`/api/idp/analytics?${params}`)
+      const response = await apiClient.get<ApiResponse<{ analytics: unknown }>>(`/api/idp/analytics?${params}`)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to fetch IDP analytics:', error)
@@ -348,7 +367,7 @@ class IDPService {
 
   async exportIDPReport(employeeId: string, format: 'pdf' | 'excel') {
     try {
-      const response = await apiClient.get(`/api/idp/employees/${employeeId}/export`, {
+      const response = await apiClient.get<ApiResponse<Blob>>(`/api/idp/employees/${employeeId}/export`, {
         params: { format },
         responseType: 'blob'
       })

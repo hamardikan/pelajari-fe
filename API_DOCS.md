@@ -464,47 +464,7 @@ Submit response for evaluation question.
 ---
 
 ## Individual Development Plan (IDP)
-
-### Analyze Competency Gaps
-Perform AI-powered competency gap analysis using PDF documents or JSON data.
-
-**POST** `/api/idp/gap-analysis`
-
-#### Option 1: Using PDF Files (Recommended)
-**Content-Type:** `multipart/form-data`
-
-**Form Data:**
-- `frameworkFile`: PDF file containing job competency framework
-- `employeeFile`: PDF file containing employee performance data
-- `metadata`: Optional JSON string with additional context
-
-**Example:**
-```bash
-curl -X POST /api/idp/gap-analysis \
-  -H "Authorization: Bearer {token}" \
-  -F "frameworkFile=@competency_framework.pdf" \
-  -F "employeeFile=@employee_performance.pdf" \
-  -F 'metadata={"jobTitle":"Software Developer","employeeName":"John Doe"}'
-```
-
-#### Option 2: Using JSON Data
-**Content-Type:** `application/json`
-
-**Request Body:**
-```json
-{
-  "frameworkData": {
-    "jobTitle": "Software Developer",
-    "managerialCompetencies": [
-      {
-        "name": "Team Leadership",
-        "expectedLevel": "Intermediate",
-        "description": "Ability to lead and guide team members"
-      }
-    ],
-    "functionalCompetencies": [
-      {
-        "name": "JavaScript Programming",
+{ "name": "Team Leadership",        "description": "Ability to lead and guide team members" } ], "functionalCompetencies": [ { "name": "JavaScript Programming",
         "expectedLevel": "Advanced",
         "description": "Expert-level JavaScript development skills"
       }

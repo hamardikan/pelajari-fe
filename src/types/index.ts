@@ -88,4 +88,12 @@ export interface SessionEvaluation {
   strengths: string[];
   areasForImprovement: string[];
   recommendations: string[];
+}
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  message?: string;
+  data: T;
+  correlationId?: string;
+  timestamp?: string;
 } 
