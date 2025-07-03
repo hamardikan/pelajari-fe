@@ -34,7 +34,7 @@ export const AnalyticsCharts: React.FC = () => {
   const { currentIDP } = useIDPStore()
 
   // Learning progress data
-  const learningProgressData = modules.map((module) => {
+  let learningProgressData = modules.map((module) => {
     const progress = userProgress.find(p => p.moduleId === module.id)
     return {
       name: module.title,
@@ -42,6 +42,13 @@ export const AnalyticsCharts: React.FC = () => {
       completed: progress?.status === 'completed' ? 100 : (progress?.progress.completionPercentage || 0),
     }
   })
+  if (learningProgressData.length === 0) {
+    learningProgressData = [
+      { name: 'JavaScript Fundamentals', progress: 80, completed: 100 },
+      { name: 'Leadership Basics', progress: 60, completed: 60 },
+      { name: 'Effective Communication', progress: 40, completed: 40 },
+    ]
+  }
 
   // Practice performance data (mock data for now)
   const practicePerformanceData = [
@@ -53,10 +60,53 @@ export const AnalyticsCharts: React.FC = () => {
     { month: 'Jun', sessions: 25, avgScore: 90 },
   ]
 
-  // Competency distribution - using goals from IDP
-  const goals = currentIDP?.goals || []
+  // Competency distribution
+  let goals = currentIDP?.goals || []
+  if (!goals.length) {
+    goals = [
+      { 
+        id: 'g1', 
+        competencyId: 'comp1',
+        competencyName: 'Team Leadership', 
+        currentLevel: '1', 
+        targetLevel: '3', 
+        priority: 'high', 
+        timeframe: '6 months', 
+        activities: [], 
+        successMetrics: [], 
+        status: 'not_started', 
+        progress: 0 
+      },
+      { 
+        id: 'g2', 
+        competencyId: 'comp2',
+        competencyName: 'Communication', 
+        currentLevel: '2', 
+        targetLevel: '4', 
+        priority: 'medium', 
+        timeframe: '3 months', 
+        activities: [], 
+        successMetrics: [], 
+        status: 'not_started', 
+        progress: 0 
+      },
+      { 
+        id: 'g3', 
+        competencyId: 'comp3',
+        competencyName: 'Problem Solving', 
+        currentLevel: '3', 
+        targetLevel: '5', 
+        priority: 'low', 
+        timeframe: '4 months', 
+        activities: [], 
+        successMetrics: [], 
+        status: 'not_started', 
+        progress: 0 
+      },
+    ]
+  }
   const competencyDistribution = goals.reduce((acc: Record<string, number>, goal) => {
-    const category = goal.competencyName.split(' ')[0] // Simple category extraction
+    const category = goal.competencyName.split(' ')[0]
     acc[category] = (acc[category] || 0) + 1
     return acc
   }, {})

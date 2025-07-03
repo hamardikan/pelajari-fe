@@ -10,6 +10,39 @@ import {
 import { wsService } from '@/services/websocket'
 import { offlineQueueService, QueuedMessage } from '@/services/offlineQueue'
 
+// Define the expected API response types
+type RoleplayScenarioData = Omit<RoleplayScenario, 'id'> & {
+  usage?: { timesUsed: number; averageScore: number };
+  authorId?: string;
+  isPublished?: boolean;
+  systemPrompt?: string;
+  evaluationCriteria?: Record<string, string[]>;
+};
+
+type ScenarioApiResponse = {
+  success: boolean;
+  data: {
+    scenarios: Array<{
+      id: string;
+      data: RoleplayScenarioData;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  };
+};
+
+type SingleScenarioApiResponse = {
+  success: boolean;
+  data: {
+    scenario: {
+      id: string;
+      data: RoleplayScenarioData;
+      createdAt: string;
+      updatedAt: string;
+    };
+  };
+};
+
 interface PracticeState {
   // Scenarios
   scenarios: RoleplayScenario[]
@@ -64,14 +97,14 @@ export const usePracticeStore = create<PracticeState>()(
     fetchScenarios: async (filters = {}) => {
       try {
         set({ isLoadingScenarios: true })
-        
-        const response = await practiceService.getScenarios(filters) as { success: boolean; data: { scenarios: RoleplayScenario[] } }
-        
+        const response = await practiceService.getScenarios(filters) as ScenarioApiResponse
         if (response.success) {
-          set({ 
-            scenarios: response.data.scenarios,
-            isLoadingScenarios: false 
-          })
+          // Flatten .data property for each scenario
+          const scenarios: RoleplayScenario[] = (response.data.scenarios || []).map((s) => ({
+            id: s.id,
+            ...s.data,
+          }))
+          set({ scenarios, isLoadingScenarios: false })
         }
       } catch (error) {
         console.error('Failed to fetch scenarios:', error)
@@ -81,10 +114,15 @@ export const usePracticeStore = create<PracticeState>()(
 
     selectScenario: async (scenarioId: string) => {
       try {
-        const response = await practiceService.getScenario(scenarioId) as { success: boolean; data: { scenario: RoleplayScenario } }
+        const response = await practiceService.getScenario(scenarioId) as SingleScenarioApiResponse
         
         if (response.success) {
-          set({ currentScenario: response.data.scenario })
+          // Flatten .data property for the scenario
+          const scenario: RoleplayScenario = {
+            id: response.data.scenario.id,
+            ...response.data.scenario.data,
+          }
+          set({ currentScenario: scenario })
         }
       } catch (error) {
         console.error('Failed to fetch scenario:', error)
@@ -155,14 +193,32 @@ export const usePracticeStore = create<PracticeState>()(
         }))
         
         if (isOnline) {
-          // Send to server
-          const response = await practiceService.sendMessage(currentSession.id, message) as { success: boolean }
-          
-          if (!response.success) {
-            throw new Error('Failed to send message')
+          // Send to server and get immediate AI response
+          const response = await practiceService.sendMessage(currentSession.id, message) as { 
+            success: boolean;
+            data: {
+              messageId: string;
+              aiResponse: string;
+              timestamp: string;
+            }
           }
           
-          // AI response will come via WebSocket
+          if (response.success) {
+            // Add AI response immediately from HTTP response
+            const aiMessage: SessionMessage = {
+              id: response.data.messageId,
+              sessionId: currentSession.id,
+              sender: 'ai',
+              content: response.data.aiResponse,
+              timestamp: response.data.timestamp
+            }
+            
+            set((state) => ({
+              messages: [...state.messages, aiMessage]
+            }))
+          } else {
+            throw new Error('Failed to send message')
+          }
         } else {
           // Queue message for offline processing
           offlineQueueService.addMessage(currentSession.scenarioId, message)
@@ -231,8 +287,32 @@ export const usePracticeStore = create<PracticeState>()(
 
       await offlineQueueService.processQueue(async (queuedMessage: QueuedMessage) => {
         try {
-          const response = await practiceService.sendMessage(currentSession.id, queuedMessage.content) as { success: boolean }
-          return response.success
+          const response = await practiceService.sendMessage(currentSession.id, queuedMessage.content) as { 
+            success: boolean;
+            data: {
+              messageId: string;
+              aiResponse: string;
+              timestamp: string;
+            }
+          }
+          
+          if (response.success) {
+            // Add AI response from queued message
+            const aiMessage: SessionMessage = {
+              id: response.data.messageId,
+              sessionId: currentSession.id,
+              sender: 'ai',
+              content: response.data.aiResponse,
+              timestamp: response.data.timestamp
+            }
+            
+            usePracticeStore.setState((state) => ({
+              messages: [...state.messages, aiMessage]
+            }))
+            
+            return true
+          }
+          return false
         } catch (error) {
           console.error('Failed to process queued message:', error)
           return false
