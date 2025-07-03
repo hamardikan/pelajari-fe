@@ -48,6 +48,8 @@ export const IDPPage: React.FC = () => {
     fetchNineBoxData,
     generateIDP,
     clearGapAnalysis,
+    performGapAnalysis,
+    analysisProgress,
   } = useIDPStore()
 
   useEffect(() => {
@@ -882,7 +884,8 @@ const GapAnalysisUpload: React.FC<{
   onCancel: () => void
 }> = ({ onComplete, onCancel }) => {
   const [files, setFiles] = useState<File[]>([])
-  const { performGapAnalysis, isAnalyzing, analysisProgress } = useIDPStore()
+  const { performGapAnalysis, fetchGapAnalysis, fetchIDP, isAnalyzing, analysisProgress } = useIDPStore()
+  const { user } = useAuthStore()
 
   const onDropFiles = (accepted: File[]) => {
     const unique = [...files, ...accepted].slice(0, 2) // keep max 2
@@ -912,6 +915,13 @@ const GapAnalysisUpload: React.FC<{
     if (files.length === 2) {
       try {
         await performGapAnalysis({ frameworkFile: files[0], employeeFile: files[1] })
+        // Refetch latest data to ensure consistency
+        if (user) {
+          await Promise.all([
+            fetchGapAnalysis(user.id),
+            fetchIDP(user.id)
+          ])
+        }
         onComplete()
       } catch (error) {
         console.error('Gap analysis failed:', error)
