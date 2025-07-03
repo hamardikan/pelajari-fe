@@ -1,0 +1,15 @@
+name = "pelajari-mobile-app"
+compatibility_date = "2025-07-03"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
+[env.production]
+vars = { VITE_API_BASE_URL = "https://api.pelajari.com", VITE_WEBSOCKET_URL = "wss://api.pelajari.com" }
+
+[env.preview]
+vars = { VITE_API_BASE_URL = "https://staging-api.pelajari.com", VITE_WEBSOCKET_URL = "wss://staging-api.pelajari.com" }
+
+[env.development]
+vars = { VITE_API_BASE_URL = "http://localhost:3000", VITE_WEBSOCKET_URL = "ws://localhost:3000" } 
