@@ -8,6 +8,7 @@ import {
   AuthPage,
   DashboardPage,
   LearningPage,
+  ModuleDetailPage,
   PracticePage,
   ProgressPage,
   ProfilePage,
@@ -65,6 +66,7 @@ function App() {
                 <Routes>
                   <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
                   <Route path={ROUTES.LEARNING} element={<LearningPage />} />
+                  <Route path="/learning/:moduleId" element={<ModuleDetailPage />} />
                   <Route path={ROUTES.PRACTICE} element={<PracticePage />} />
                   <Route path={ROUTES.PRACTICE_SCENARIO} element={<ScenarioDetailPage />} />
                   <Route path={ROUTES.PRACTICE_SESSION} element={<RoleplaySessionPage />} />

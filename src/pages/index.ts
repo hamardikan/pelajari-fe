@@ -1,6 +1,7 @@
 export { AuthPage } from './AuthPage'
 export { DashboardPage } from './DashboardPage'
 export { LearningPage } from './LearningPage'
+export { ModuleDetailPage } from './ModuleDetailPage'
 export { PracticePage } from './PracticePage'
 export { ProgressPage } from './ProgressPage'
 export { ProfilePage } from './ProfilePage'

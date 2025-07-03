@@ -40,7 +40,7 @@ interface IDPState {
   createFramework: (framework: Partial<CompetencyFramework>) => Promise<void>
 
   // Gap Analysis actions
-  performGapAnalysis: (data: Record<string, unknown>) => Promise<void>
+  performGapAnalysis: (data: { frameworkFile: File, employeeFile: File }) => Promise<void>
   fetchGapAnalysis: (employeeId: string) => Promise<void>
   clearGapAnalysis: () => void
 
@@ -48,7 +48,8 @@ interface IDPState {
   generateIDP: (employeeId: string) => Promise<void>
   fetchIDP: (employeeId: string) => Promise<void>
   updateIDPGoal: (goalId: string, updates: Partial<DevelopmentGoal>) => Promise<void>
-  approveIDP: (idpId: string, comments: string) => Promise<void>
+  approveIDP: (idpId: string) => Promise<void>
+  updateIDPProgress: (idpId: string, progress: { status: string; completionPercentage: number }) => Promise<void>
   
   // Program actions
   fetchDevelopmentPrograms: (filters?: Record<string, unknown>) => Promise<void>
@@ -116,10 +117,10 @@ export const useIDPStore = create<IDPState>()(
      },
 
     // Gap Analysis actions
-    performGapAnalysis: async (data: Record<string, unknown>) => {
+    performGapAnalysis: async (data: { frameworkFile: File, employeeFile: File }) => {
       try {
         set({ isAnalyzing: true, analysisProgress: 0 })
-        
+
         // Simulate progress updates
         const progressInterval = setInterval(() => {
           set((state) => ({
@@ -127,15 +128,15 @@ export const useIDPStore = create<IDPState>()(
           }))
         }, 500)
 
-        const response = await idpService.performGapAnalysis(data as Parameters<typeof idpService.performGapAnalysis>[0])
-        
+        const response = await idpService.performGapAnalysis(data)
+
         clearInterval(progressInterval)
         set({ analysisProgress: 100 })
 
         if (response.success) {
-          set({ 
+          set({
             gapAnalysis: response.data.analysis,
-            isAnalyzing: false 
+            isAnalyzing: false
           })
         }
       } catch (error) {
@@ -201,11 +202,9 @@ export const useIDPStore = create<IDPState>()(
 
         const response = await idpService.updateIDPProgress(
           currentIDP.id, 
-          goalId, 
           {
             status: updates.status || 'in_progress',
-            completionPercentage: updates.progress || 0,
-            notes: updates.status === 'completed' ? 'Goal completed' : undefined
+            completionPercentage: updates.progress || 0
           }
         )
 
@@ -225,12 +224,9 @@ export const useIDPStore = create<IDPState>()(
       }
     },
 
-    approveIDP: async (idpId: string, comments: string) => {
+    approveIDP: async (idpId: string) => {
       try {
-        const response = await idpService.approveIDP(idpId, {
-          managerId: 'current-manager-id', // This should come from auth store
-          comments
-        })
+        const response = await idpService.approveIDP(idpId)
 
         if (response.success) {
           set((state) => ({
@@ -242,6 +238,25 @@ export const useIDPStore = create<IDPState>()(
         }
       } catch (error) {
         console.error('Failed to approve IDP:', error)
+        throw error
+      }
+    },
+
+    updateIDPProgress: async (idpId: string, progress: { status: string; completionPercentage: number }) => {
+      try {
+        const response = await idpService.updateIDPProgress(idpId, progress)
+
+        if (response.success) {
+          set((state) => ({
+            currentIDP: state.currentIDP ? {
+              ...state.currentIDP,
+              overallProgress: progress.completionPercentage,
+              status: progress.status as any
+            } : null
+          }))
+        }
+      } catch (error) {
+        console.error('Failed to update IDP progress:', error)
         throw error
       }
     },

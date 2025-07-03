@@ -175,33 +175,18 @@ class IDPService {
 
   // Gap Analysis
   async performGapAnalysis(data: {
-    employeeId: string
-    frameworkFile?: File
-    employeeFile?: File
-    frameworkData?: Record<string, unknown>
-    employeeData?: Record<string, unknown>
+    frameworkFile: File
+    employeeFile: File
   }) {
     try {
-      if (data.frameworkFile || data.employeeFile) {
         const formData = new FormData()
-        if (data.frameworkFile) formData.append('frameworkFile', data.frameworkFile)
-        if (data.employeeFile) formData.append('employeeFile', data.employeeFile)
-        if (data.frameworkData) formData.append('frameworkData', JSON.stringify(data.frameworkData))
-        if (data.employeeData) formData.append('employeeData', JSON.stringify(data.employeeData))
-        formData.append('employeeId', data.employeeId)
+        formData.append('frameworkFile', data.frameworkFile)
+        formData.append('employeeFile', data.employeeFile)
 
         const response = await apiClient.post('/api/idp/gap-analysis', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
         return { success: true, data: response.data }
-      } else {
-        const response = await apiClient.post('/api/idp/gap-analysis', {
-          employeeId: data.employeeId,
-          frameworkData: data.frameworkData,
-          employeeData: data.employeeData,
-        })
-        return { success: true, data: response.data }
-      }
     } catch (error) {
       console.error('Failed to perform gap analysis:', error)
       return { success: false, error }
@@ -250,19 +235,9 @@ class IDPService {
     }
   }
 
-  async updateIDP(idpId: string, updates: Partial<IndividualDevelopmentPlan>) {
+  async approveIDP(idpId: string) {
     try {
-      const response = await apiClient.put(`/api/idp/${idpId}`, updates)
-      return { success: true, data: response.data }
-    } catch (error) {
-      console.error('Failed to update IDP:', error)
-      return { success: false, error }
-    }
-  }
-
-  async approveIDP(idpId: string, data: { managerId: string; comments: string }) {
-    try {
-      const response = await apiClient.put(`/api/idp/${idpId}/approve`, data)
+      const response = await apiClient.put(`/api/idp/${idpId}/approve`)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to approve IDP:', error)
@@ -270,16 +245,25 @@ class IDPService {
     }
   }
 
-  async updateIDPProgress(idpId: string, goalId: string, progress: {
+  async updateIDPProgress(idpId: string, progress: {
     status: string
     completionPercentage: number
-    notes?: string
   }) {
     try {
-      const response = await apiClient.put(`/api/idp/${idpId}/goals/${goalId}/progress`, progress)
+      const response = await apiClient.put(`/api/idp/${idpId}/progress`, progress)
       return { success: true, data: response.data }
     } catch (error) {
       console.error('Failed to update IDP progress:', error)
+      return { success: false, error }
+    }
+  }
+
+  async updateIDP(idpId: string, updates: Partial<IndividualDevelopmentPlan>) {
+    try {
+      const response = await apiClient.put(`/api/idp/${idpId}`, updates)
+      return { success: true, data: response.data }
+    } catch (error) {
+      console.error('Failed to update IDP:', error)
       return { success: false, error }
     }
   }

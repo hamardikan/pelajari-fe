@@ -40,7 +40,26 @@ interface LearningState {
     tags?: string[]
   }) => Promise<{ moduleId: string }>
   submitAssessment: (moduleId: string, answers: string[]) => Promise<unknown>
+  submitEvaluation: (moduleId: string, questionIndex: number, response: string) => Promise<unknown>
   clearCurrentModule: () => void
+}
+
+// Helper to normalise module payload coming from the backend (id + data object)
+const transformModulePayload = (raw: any): LearningModule => {
+  const data = raw?.data || {}
+
+  return {
+    id: raw.id,
+    title: data.title ?? '',
+    summary: data.summary ?? '',
+    difficulty: (data.difficulty ?? '') as LearningModule['difficulty'],
+    estimatedDuration: data.estimatedDuration ?? 0,
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    isPublished: data.isPublished ?? false,
+    content: data.content ?? { sections: [], flashcards: [], assessment: [], evaluation: [] },
+    createdAt: raw.createdAt ?? '',
+    sourceDocumentId: data.sourceDocumentId,
+  }
 }
 
 export const useLearningStore = create<LearningState>()(
@@ -65,11 +84,12 @@ export const useLearningStore = create<LearningState>()(
         set({ isLoadingModules: true })
         const { filters } = get()
         
-        const response = await learningService.getModules(filters) as { success: boolean; data: { modules: LearningModule[] } }
+        const response = await learningService.getModules(filters) as { success: boolean; data: { modules: any[] } }
         
         if (response.success) {
+          const normalised = response.data.modules.map(transformModulePayload)
           set({ 
-            modules: response.data.modules,
+            modules: normalised,
             isLoadingModules: false 
           })
         }
@@ -90,10 +110,10 @@ export const useLearningStore = create<LearningState>()(
 
     selectModule: async (moduleId: string) => {
       try {
-        const response = await learningService.getModule(moduleId) as { success: boolean; data: { module: LearningModule } }
+        const response = await learningService.getModule(moduleId) as { success: boolean; data: { module: any } }
         
         if (response.success) {
-          set({ currentModule: response.data.module })
+          set({ currentModule: transformModulePayload(response.data.module) })
           
           // Join WebSocket room for real-time updates
           wsService.joinModuleRoom(moduleId)
@@ -190,6 +210,21 @@ export const useLearningStore = create<LearningState>()(
         throw new Error('Assessment submission failed')
       } catch (error) {
         console.error('Failed to submit assessment:', error)
+        throw error
+      }
+    },
+
+    submitEvaluation: async (moduleId: string, questionIndex: number, response: string) => {
+      try {
+        const result = await learningService.submitEvaluation(moduleId, questionIndex, response) as { success: boolean; data: unknown }
+        
+        if (result.success) {
+          return result.data
+        }
+        
+        throw new Error('Evaluation submission failed')
+      } catch (error) {
+        console.error('Failed to submit evaluation:', error)
         throw error
       }
     },

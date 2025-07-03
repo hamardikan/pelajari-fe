@@ -118,7 +118,8 @@ class LearningService {
   }
 
   async submitEvaluation(moduleId: string, questionIndex: number, response: string) {
-    return apiClient.post(`${API_ENDPOINTS.LEARNING.MODULES}/${moduleId}/evaluation`, {
+    return apiClient.post(API_ENDPOINTS.LEARNING.EVALUATIONS, {
+      moduleId,
       questionIndex,
       response,
     })

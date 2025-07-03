@@ -1,292 +1,349 @@
-Of course. Here is the comprehensive implementation guide as a standard markdown response.
-
-Pelajari Platform - Frontend Implementation Guide
-Introduction
-This document provides a comprehensive, step-by-step guide to implement the remaining features of the Pelajari platform's frontend. The goal is to connect the existing UI components, state management (Zustand), and API services to create a fully functional application based on the provided API_DOCS.md and workflows.md.
-
-Core Principles:
-
-Component Reusability: Leverage existing common components like Button, Loading, EmptyState, and the MUI theme.
-
-State Management: All application state should be managed through the appropriate Zustand stores (authStore, learningStore, 'practiceStore, idpStore`).
-
-API Integration: All data fetching and mutations must go through the defined services (learningService, practiceService, idpService).
-
-UX/UI Consistency: Adhere strictly to the design principles and user flows outlined in workflows.md.
-
-1. Authentication (src/pages/AuthPage.tsx)
-The foundation for authentication is in place, but the login and registration forms are placeholders.
-
-1.1. Create LoginForm.tsx
-File Location: src/components/auth/LoginForm.tsx
-
-Objective: Create a form to handle user login.
-
-Implementation Steps:
-
-Create the component:
-
-Use TextField from MUI for "Email" and "Password" fields.
-
-Use the custom Button component for the "Login" button.
-
-Add a link for "Forgot Password?" and a link to the registration page.
-
-State Management:
-
-Use react-hook-form for form state management and validation (recommended).
-
-On submit, call the login action from useAuthStore.
-
-API Call:
-
-The authStore.login action will call apiClient.post(API_ENDPOINTS.AUTH.LOGIN, ...).
-
-User Feedback:
-
-Disable the login button and show a loading state while authStore.isLoading is true.
-
-Display error messages from the API call using react-hot-toast.
-
-Update AuthPage.tsx:
-
-Replace the placeholder LoginForm with this new component.
-
-1.2. Create RegisterForm.tsx
-File Location: src/components/auth/RegisterForm.tsx
-
-Objective: Create a multi-step registration form as per workflows.md.
-
-Implementation Steps:
-
-Create the component:
-
-Use a stepper or a state variable to manage the two steps: "Basic Info" and "Role Selection".
-
-Step 1 (Basic Info): TextFields for Name, Email, and Password.
-
-Step 2 (Role Selection): Use ToggleButtonGroup or custom Card components for selecting "Employee" or "Manager".
-
-State Management:
-
-Use react-hook-form to manage form state across steps.
-
-On final submission, call the register action from useAuthStore.
-
-API Call:
-
-The authStore.register action handles the API call. authStore will automatically log the user in upon successful registration.
-
-Update AuthPage.tsx:
-
-Replace the placeholder RegisterForm with this new component.
-
-2. Dashboard (src/pages/DashboardPage.tsx)
-The dashboard is the user's landing page and should provide a summary of their learning journey.
-
-Objective: Replace the placeholder content with dynamic, data-driven components based on the workflow document.
-
-Implementation Steps:
-
-Create Dashboard Components:
-
-WelcomeBanner.tsx: Displays a greeting and the user's learning streak.
-
-QuickStatsGrid.tsx: A grid of StatsCard.tsx components. Each card shows a key metric (e.g., "Modules Completed," "Practice Sessions").
-
-ContinueLearning.tsx: Shows the last module the user was working on and recommendations.
-
-RecentActivity.tsx: A timeline feed of recent events.
-
-Data Fetching:
-
-In DashboardPage.tsx, use effects to fetch data from useLearningStore, usePracticeStore, and useIDPStore.
-
-Example: Get modules and userProgress from learningStore to calculate completed modules.
-
-Component Integration:
-
-Assemble the created components within DashboardPage.tsx.
-
-Use the Loading component while data is being fetched.
-
-Use the EmptyState component if there is no data to display (e.g., for a new user).
-
-3. Roleplay Practice (src/pages/PracticePage.tsx)
-This section is currently a placeholder. The full workflow needs to be built.
-
-3.1. Scenario Selection
-Objective: Display a list of available roleplay scenarios for the user to choose from.
-
-Implementation Steps:
-
-Update PracticePage.tsx:
-
-On component mount, call fetchScenarios from usePracticeStore.
-
-Display scenarios from the store in a grid or list layout.
-
-Create a ScenarioCard.tsx component to display scenario details (title, description, difficulty).
-
-Add search and filter controls that call the fetchScenarios with filter parameters.
-
-When a user clicks a scenario, navigate them to a dynamic route like /practice/scenarios/:scenarioId.
-
-3.2. Scenario Details & Session Start
-File Location: src/pages/ScenarioDetailPage.tsx (new file)
-
-Objective: Show detailed information about a scenario and allow the user to start a session.
-
-Implementation Steps:
-
-Create the page component:
-
-Fetch the scenarioId from the URL params.
-
-Call selectScenario(scenarioId) from usePracticeStore.
-
-Display the full details of currentScenario from the store.
-
-Include a prominent "Start Practice" button.
-
-Start Session:
-
-On button click, call startSession(scenarioId) from usePracticeStore.
-
-Once the session is created successfully, navigate the user to the roleplay interface at /practice/sessions/:sessionId.
-
-3.3. Roleplay Session Interface
-File Location: src/pages/RoleplaySessionPage.tsx (new file)
-
-Objective: Build the chat interface for the roleplay.
-
-Implementation Steps:
-
-Create the page component:
-
-Fetch the sessionId from the URL.
-
-Display the chat messages from usePracticeStore().messages.
-
-Create a Message.tsx component to render user and AI messages differently.
-
-Create a MessageInput.tsx component with a text input and a "Send" button.
-
-Message Handling:
-
-The "Send" button should call the sendMessage action from usePracticeStore.
-
-The store will optimistically add the user's message to the state.
-
-The AI's response will be received via the WebSocket (session:message event) and added to the store, triggering a re-render.
-
-Ending the Session:
-
-Add an "End Session" button that calls endSession() from the store.
-
-When sessionEvaluation in the store is populated, display the results.
-
-3.4. Session Evaluation
-Objective: Display the performance feedback after a session ends.
-
-Implementation Steps:
-
-Create an EvaluationReport.tsx component.
-
-This component takes the sessionEvaluation object as a prop.
-
-Display the overall score, competency breakdown (a radar chart would be great here), strengths, and areas for improvement.
-
-Conditionally render this component in RoleplaySessionPage.tsx when the session is complete.
-
-4. Individual Development Plan (src/pages/IDPPage.tsx)
-This page has a basic structure but needs its core functionality implemented.
-
-4.1. Gap Analysis Wizard
-Objective: Implement the multi-step process for a user to perform a gap analysis.
-
-Implementation Steps:
-
-Create GapAnalysisWizard.tsx:
-
-This component will be shown in a Dialog when the user clicks "Start Gap Analysis".
-
-Implement a stepper for the workflow:
-
-Upload Competency Framework: A file upload zone for the framework PDF.
-
-Upload Employee Data: A file upload zone for the employee performance PDF.
-
-Review & Submit: Show file previews and a submit button.
-
-API Integration:
-
-The submit button will call performGapAnalysis from useIDPStore, passing the files.
-
-Show a loading state (isAnalyzing) while the backend processes the data.
-
-On success, close the dialog and update the state. The IDPPage will then show the results.
-
-4.2. Displaying Gap Analysis & IDP
-Objective: Flesh out the "Gap Analysis" and "Development Plan" tabs in IDPPage.tsx.
-
-Implementation Steps:
-
-Gap Analysis Tab:
-
-When gapAnalysis is available in idpStore, display the results.
-
-Create a GapAnalysisResults.tsx component to show the overall score, priority areas, and a list of competency gaps.
-
-Include a "Generate Development Plan" button that calls generateIDP().
-
-Development Plan Tab:
-
-When currentIDP is available, display it.
-
-Create an IDPView.tsx component.
-
-Display the plan's goals in a list or timeline view.
-
-Each goal should be expandable to show development activities and allow for progress updates.
-
-Implement the logic for updateIDPGoal when a user interacts with a goal.
-
-5. Progress & Profile Pages
-5.1. Progress Page (src/pages/ProgressPage.tsx)
-Objective: Visualize the user's learning and development progress.
-
-Implementation Steps:
-
-Fetch Data: Get progress data from learningStore, practiceStore, and idpStore.
-
-Create Visualization Components:
-
-Use a charting library like recharts to create:
-
-A bar chart for "Modules Completed by Category".
-
-A line chart for "Assessment Scores Over Time".
-
-A radar chart for "Competency Growth" based on IDP and practice session data.
-
-Display Achievements: Show a list of completed modules and earned badges.
-
-5.2. Profile Page (src/pages/ProfilePage.tsx)
-Objective: Allow users to view and update their profile information.
-
-Implementation Steps:
-
-Create ProfileForm.tsx:
-
-Display user information from useAuthStore().user.
-
-Allow editing of fields like "Name".
-
-On submit, call updateProfile from authStore.
-
-Account Settings:
-
-Add a section for account settings, such as changing a password or managing notification preferences.
-
-Include a "Logout" button that calls authStore.logout().
+# Comprehensive Guide to Implementing the New IDP Feature Flow
+
+This document provides a step-by-step guide to integrate the new Individual Development Plan (IDP) feature into the existing application. This includes creating new components, updating the zustand store, modifying the IDP service, and adding new routes.
+
+## 1\. Update API Endpoints
+
+First, let's add the new API endpoints to our constants file.
+
+**File:** `src/utils/constants.ts`
+
+```typescript
+export const API_ENDPOINTS = {
+  AUTH: {
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    REFRESH: '/auth/refresh',
+    LOGOUT: '/auth/logout',
+  },
+  LEARNING: {
+    MODULES: '/api/learning/modules',
+    PROGRESS: '/api/learning/progress',
+    ASSESSMENTS: '/api/learning/assessments',
+  },
+  PRACTICE: {
+    SCENARIOS: '/api/roleplay/scenarios',
+    SESSIONS: '/api/roleplay/sessions',
+  },
+  IDP: {
+    FRAMEWORKS: '/api/idp/frameworks',
+    FRAMEWORK_DETAILS: (id: string) => `/api/idp/frameworks/${id}`,
+    GAP_ANALYSIS: '/api/idp/gap-analysis',
+    GENERATE: (employeeId: string) => `/api/idp/generate/${employeeId}`,
+    PLANS: (employeeId: string) => `/api/idp/employees/${employeeId}`,
+    UPDATE_PROGRESS: (idpId: string) => `/api/idp/${idpId}/progress`,
+    APPROVE: (idpId: string) => `/api/idp/${idpId}/approve`,
+    DEVELOPMENT_PROGRAMS: '/api/idp/development-programs',
+    ANALYTICS: '/api/idp/analytics',
+  },
+  DOCUMENTS: '/api/documents',
+} as const;
+```
+
+## 2\. Update the IDP Service
+
+Next, update the `idpService` to include the new API calls for gap analysis, IDP generation, and management.
+
+**File:** `src/services/idp.ts`
+
+```typescript
+// ... existing code
+
+  // Gap Analysis
+  async performGapAnalysis(data: {
+    frameworkFile: File
+    employeeFile: File
+  }) {
+    try {
+        const formData = new FormData()
+        formData.append('frameworkFile', data.frameworkFile)
+        formData.append('employeeFile', data.employeeFile)
+
+        const response = await apiClient.post('/api/idp/gap-analysis', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        return { success: true, data: response.data }
+    } catch (error) {
+      console.error('Failed to perform gap analysis:', error)
+      return { success: false, error }
+    }
+  }
+
+  // ... existing code
+
+  // IDP Management
+  async generateIDP(employeeId: string) {
+    try {
+      const response = await apiClient.post(`/api/idp/generate/${employeeId}`)
+      return { success: true, data: response.data }
+    } catch (error) {
+      console.error('Failed to generate IDP:', error)
+      return { success: false, error }
+    }
+  }
+
+  async getIDP(employeeId: string) {
+    try {
+      const response = await apiClient.get(`/api/idp/employees/${employeeId}`)
+      return { success: true, data: response.data }
+    } catch (error) {
+      console.error('Failed to fetch IDP:', error)
+      return { success: false, error }
+    }
+  }
+
+  async approveIDP(idpId: string) {
+    try {
+      const response = await apiClient.put(`/api/idp/${idpId}/approve`)
+      return { success: true, data: response.data }
+    } catch (error) {
+      console.error('Failed to approve IDP:', error)
+      return { success: false, error }
+    }
+  }
+
+  async updateIDPProgress(idpId: string, progress: {
+    status: string
+    completionPercentage: number
+  }) {
+    try {
+      const response = await apiClient.put(`/api/idp/${idpId}/progress`, progress)
+      return { success: true, data: response.data }
+    } catch (error) {
+      console.error('Failed to update IDP progress:', error)
+      return { success: false, error }
+    }
+  }
+
+// ... existing code
+```
+
+## 3\. Update the IDP Store
+
+Now, let's update our zustand store to manage the state for the new IDP feature.
+
+**File:** `src/store/idpStore.ts`
+
+```typescript
+// ... existing code
+
+  // Gap Analysis actions
+    performGapAnalysis: async (data: { frameworkFile: File, employeeFile: File }) => {
+      try {
+        set({ isAnalyzing: true, analysisProgress: 0 })
+
+        // Simulate progress updates
+        const progressInterval = setInterval(() => {
+          set((state) => ({
+            analysisProgress: Math.min(state.analysisProgress + 10, 90)
+          }))
+        }, 500)
+
+        const response = await idpService.performGapAnalysis(data)
+
+        clearInterval(progressInterval)
+        set({ analysisProgress: 100 })
+
+        if (response.success) {
+          set({
+            gapAnalysis: response.data.analysis,
+            isAnalyzing: false
+          })
+        }
+      } catch (error) {
+        console.error('Failed to perform gap analysis:', error)
+        set({ isAnalyzing: false, analysisProgress: 0 })
+        throw error
+      }
+    },
+
+// ... existing code
+```
+
+## 4\. Create New Components
+
+We'll create new components to handle the UI for the IDP feature.
+
+### 4.1. Gap Analysis Form
+
+Create a new file `src/pages/IDP/GapAnalysis/index.tsx` for the gap analysis form.
+
+```typescript
+import React, { useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Box, Button, Typography } from '@mui/material';
+import { useIDPStore } from '@/store/idpStore';
+
+export const GapAnalysisForm: React.FC = () => {
+  const [frameworkFile, setFrameworkFile] = useState<File | null>(null);
+  const [employeeFile, setEmployeeFile] = useState<File | null>(null);
+  const { performGapAnalysis, isAnalyzing } = useIDPStore();
+
+  const onDropFramework = (acceptedFiles: File[]) => {
+    setFrameworkFile(acceptedFiles[0]);
+  };
+
+  const onDropEmployee = (acceptedFiles: File[]) => {
+    setEmployeeFile(acceptedFiles[0]);
+  };
+
+  const { getRootProps: getFrameworkRootProps, getInputProps: getFrameworkInputProps } = useDropzone({ onDrop: onDropFramework });
+  const { getRootProps: getEmployeeRootProps, getInputProps: getEmployeeInputProps } = useDropzone({ onDrop: onDropEmployee });
+
+  const handleSubmit = () => {
+    if (frameworkFile && employeeFile) {
+      performGapAnalysis({ frameworkFile, employeeFile });
+    }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h5">Competency Gap Analysis</Typography>
+      <Box my={2}>
+        <Box {...getFrameworkRootProps()} border="1px dashed grey" p={2} my={1}>
+          <input {...getFrameworkInputProps()} />
+          <Typography>Drag 'n' drop framework file here, or click to select file</Typography>
+          {frameworkFile && <Typography>{frameworkFile.name}</Typography>}
+        </Box>
+        <Box {...getEmployeeRootProps()} border="1px dashed grey" p={2} my={1}>
+          <input {...getEmployeeInputProps()} />
+          <Typography>Drag 'n' drop employee file here, or click to select file</Typography>
+          {employeeFile && <Typography>{employeeFile.name}</Typography>}
+        </Box>
+      </Box>
+      <Button onClick={handleSubmit} disabled={isAnalyzing || !frameworkFile || !employeeFile}>
+        {isAnalyzing ? 'Analyzing...' : 'Start Analysis'}
+      </Button>
+    </Box>
+  );
+};
+```
+
+### 4.2. Generate IDP Component
+
+Create a new file `src/pages/IDP/GenerateIDP/index.tsx` for the IDP generation.
+
+```typescript
+import React from 'react';
+import { Box, Button, Typography } from '@mui/material';
+import { useIDPStore } from '@/store/idpStore';
+import { useAuthStore } from '@/store/authStore';
+
+export const GenerateIDP: React.FC = () => {
+  const { generateIDP, isGeneratingIDP } = useIDPStore();
+  const { user } = useAuthStore();
+
+  const handleGenerate = () => {
+    if (user) {
+      generateIDP(user.id);
+    }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h5">Generate Individual Development Plan</Typography>
+      <Button onClick={handleGenerate} disabled={isGeneratingIDP}>
+        {isGeneratingIDP ? 'Generating...' : 'Generate IDP'}
+      </Button>
+    </Box>
+  );
+};
+```
+
+### 4.3. Manage IDP Component
+
+Create a new file `src/pages/IDP/ManageIDP/index.tsx` for IDP management.
+
+```typescript
+import React, { useEffect } from 'react';
+import { Box, Button, Typography } from '@mui/material';
+import { useIDPStore } from '@/store/idpStore';
+import { useAuthStore } from '@/store/authStore';
+
+export const ManageIDP: React.FC = () => {
+  const { currentIDP, fetchIDP, approveIDP, updateIDPProgress } = useIDPStore();
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    if (user) {
+      fetchIDP(user.id);
+    }
+  }, [user, fetchIDP]);
+
+  const handleApprove = () => {
+    if (currentIDP) {
+      approveIDP(currentIDP.id);
+    }
+  };
+
+  const handleUpdateProgress = () => {
+    if (currentIDP) {
+      // Example progress update
+      updateIDPProgress(currentIDP.id, {
+        status: 'in_progress',
+        completionPercentage: 50,
+      });
+    }
+  };
+
+  if (!currentIDP) {
+    return <Typography>No IDP found.</Typography>;
+  }
+
+  return (
+    <Box>
+      <Typography variant="h5">Manage Individual Development Plan</Typography>
+      <Typography>Status: {currentIDP.status}</Typography>
+      <Button onClick={handleApprove}>Approve Plan</Button>
+      <Button onClick={handleUpdateProgress}>Update Progress</Button>
+    </Box>
+  );
+};
+```
+
+## 5\. Update Main IDP Page
+
+Now, let's update the main `IDPPage` to integrate these new components.
+
+**File:** `src/pages/IDPPage.tsx`
+
+```typescript
+import React from 'react';
+import { Box, Typography } from '@mui/material';
+import { GapAnalysisForm } from './IDP/GapAnalysis';
+import { GenerateIDP } from './IDP/GenerateIDP';
+import { ManageIDP } from './IDP/ManageIDP';
+
+export const IDPPage: React.FC = () => {
+  return (
+    <Box>
+      <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
+        Individual Development Plan
+      </Typography>
+      <GapAnalysisForm />
+      <GenerateIDP />
+      <ManageIDP />
+    </Box>
+  );
+};
+```
+
+## 6\. Add New Routes
+
+Finally, let's add the new routes to our `App.tsx` file.
+
+**File:** `src/App.tsx`
+
+```typescript
+// ... existing code
+
+import { IDPPage } from '@/pages';
+
+// ... existing code
+
+          <Route path={ROUTES.IDP} element={<IDPPage />} />
+
+// ... existing code
+```
+
+This completes the integration of the new IDP feature flow. You can now run the application to see the changes.

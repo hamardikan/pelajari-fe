@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
-  Grid,
   TextField,
   Chip,
   FormControl,
@@ -115,8 +114,8 @@ export const LearningPage: React.FC = () => {
 
       {/* Search and Filters */}
       <Box sx={{ mb: 4 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ flex: '1 1 100%', md: { flex: '1 1 50%' } }}>
             <TextField
               fullWidth
               placeholder="Search modules..."
@@ -130,9 +129,9 @@ export const LearningPage: React.FC = () => {
                 ),
               }}
             />
-          </Grid>
+          </Box>
           
-          <Grid item xs={12} md={3}>
+          <Box sx={{ flex: '1 1 45%', md: { flex: '1 1 25%' } }}>
             <FormControl fullWidth>
               <InputLabel>Difficulty</InputLabel>
               <Select
@@ -146,9 +145,9 @@ export const LearningPage: React.FC = () => {
                 <MenuItem value="advanced">Advanced</MenuItem>
               </Select>
             </FormControl>
-          </Grid>
+          </Box>
           
-          <Grid item xs={12} md={3}>
+          <Box sx={{ flex: '1 1 45%', md: { flex: '1 1 25%' } }}>
             <Button
               variant="outline"
               startIcon={<FilterIcon />}
@@ -157,8 +156,8 @@ export const LearningPage: React.FC = () => {
             >
               Filters
             </Button>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
 
         {/* Tag Filters */}
         <AnimatePresence>
@@ -197,10 +196,10 @@ export const LearningPage: React.FC = () => {
           <Typography>Loading modules...</Typography>
         </Box>
       ) : (
-        <Grid container spacing={3}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 3 }}>
           <AnimatePresence>
             {modules.map((module, index) => (
-              <Grid item xs={12} sm={6} lg={4} key={module.id}>
+              <Box sx={{ width: { xs: '100%', sm: `calc(50% - 12px)`, lg: `calc(33.333% - 16px)` } }} key={module.id}>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -211,33 +210,31 @@ export const LearningPage: React.FC = () => {
                     module={module}
                     onClick={() => {
                       // Navigate to module detail
-                      console.log('Open module:', module.id)
+                      window.location.href = `/learning/${module.id}`
                     }}
                   />
                 </motion.div>
-              </Grid>
+              </Box>
             ))}
           </AnimatePresence>
           
           {modules.length === 0 && !isLoadingModules && (
-            <Grid item xs={12}>
-              <Box sx={{ textAlign: 'center', py: 8 }}>
-                <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                  No learning modules yet
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Upload your first document to create AI-powered learning content
-                </Typography>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowUpload(true)}
-                >
-                  Upload Document
-                </Button>
-              </Box>
-            </Grid>
+            <Box sx={{ width: '100%', textAlign: 'center', py: 8 }}>
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                No learning modules yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Upload your first document to create AI-powered learning content
+              </Typography>
+              <Button
+                variant="primary"
+                onClick={() => setShowUpload(true)}
+              >
+                Upload Document
+              </Button>
+            </Box>
           )}
-        </Grid>
+        </Box>
       )}
 
       {/* Upload Dialog */}

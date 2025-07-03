@@ -12,21 +12,21 @@ import {
   CardContent,
   Chip,
   LinearProgress,
-  Grid,
+  Button,
 } from '@mui/material'
 import {
   Add as AddIcon,
   Analytics as AnalyticsIcon,
   Assignment as IDPIcon,
   Search as AnalysisIcon,
+  CloudUpload as UploadIcon,
 } from '@mui/icons-material'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useDropzone } from 'react-dropzone'
 import { useIDPStore } from '@/store/idpStore'
 import { useAuthStore } from '@/store/authStore'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Loading } from '@/components/common/Loading'
-import { Button } from '@/components/common/Button'
-import { GapAnalysisWizard } from '@/components/idp/GapAnalysisWizard'
 
 export const IDPPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0)
@@ -97,73 +97,69 @@ export const IDPPage: React.FC = () => {
                 Gap Analysis Results
               </Typography>
               
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={4}>
-                  <Card>
-                    <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                      <Box
-                        sx={{
-                          width: 120,
-                          height: 120,
-                          borderRadius: '50%',
-                          bgcolor: gapAnalysis.overallGapScore >= 70 ? 'success.main' : 
-                                   gapAnalysis.overallGapScore >= 50 ? 'warning.main' : 'error.main',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          mx: 'auto',
-                          mb: 2,
-                        }}
-                      >
-                        <Typography variant="h3" color="white" sx={{ fontWeight: 700 }}>
-                          {gapAnalysis.overallGapScore}
-                        </Typography>
-                      </Box>
-                      
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                        Overall Gap Score
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 3 }}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                    <Box
+                      sx={{
+                        width: 120,
+                        height: 120,
+                        borderRadius: '50%',
+                        bgcolor: gapAnalysis.overallGapScore >= 70 ? 'success.main' : 
+                                 gapAnalysis.overallGapScore >= 50 ? 'warning.main' : 'error.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mx: 'auto',
+                        mb: 2,
+                      }}
+                    >
+                      <Typography variant="h3" color="white" sx={{ fontWeight: 700 }}>
+                        {gapAnalysis.overallGapScore}
                       </Typography>
-                      
-                      <Typography variant="body2" color="text.secondary">
-                        {gapAnalysis.overallGapScore >= 70 ? 'Strong competency alignment' :
-                         gapAnalysis.overallGapScore >= 50 ? 'Moderate development needed' :
-                         'Significant gaps identified'}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                    </Box>
+                    
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      Overall Gap Score
+                    </Typography>
+                    
+                    <Typography variant="body2" color="text.secondary">
+                      {gapAnalysis.overallGapScore >= 70 ? 'Strong competency alignment' :
+                       gapAnalysis.overallGapScore >= 50 ? 'Moderate development needed' :
+                       'Significant gaps identified'}
+                    </Typography>
+                  </CardContent>
+                </Card>
                 
-                <Grid item xs={12} md={8}>
-                  <Card>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                        Priority Development Areas
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                        {gapAnalysis.priorityAreas.map((area, index) => (
-                          <Chip
-                            key={index}
-                            label={area}
-                            color="primary"
-                            variant="outlined"
-                          />
-                        ))}
-                      </Box>
-                      
-                      <Button
-                        variant="primary"
-                        onClick={handleGenerateIDP}
-                        disabled={isGeneratingIDP}
-                        loading={isGeneratingIDP}
-                        fullWidth
-                      >
-                        Generate Development Plan
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+                <Card>
+                  <CardContent sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                      Priority Development Areas
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                      {gapAnalysis.priorityAreas.map((area, index) => (
+                        <Chip
+                          key={index}
+                          label={area}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                    
+                    <Button
+                      variant="contained"
+                      onClick={handleGenerateIDP}
+                      disabled={isGeneratingIDP}
+                      fullWidth
+                      startIcon={isGeneratingIDP ? <Loading /> : <IDPIcon />}
+                    >
+                      {isGeneratingIDP ? 'Generating...' : 'Generate Development Plan'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Box>
             </Box>
           )
         }
@@ -192,117 +188,113 @@ export const IDPPage: React.FC = () => {
                 Development Plan
               </Typography>
               
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={4}>
-                  <Card>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                        Plan Overview
-                      </Typography>
-                      
-                      <Box sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            Overall Progress
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {Math.round(currentIDP.overallProgress)}%
-                          </Typography>
-                        </Box>
-                        <LinearProgress
-                          variant="determinate"
-                          value={currentIDP.overallProgress}
-                          sx={{
-                            height: 8,
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 3 }}>
+                <Card>
+                  <CardContent sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                      Plan Overview
+                    </Typography>
+                    
+                    <Box sx={{ mb: 3 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Overall Progress
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {Math.round(currentIDP.overallProgress)}%
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={currentIDP.overallProgress}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: 'grey.200',
+                          '& .MuiLinearProgress-bar': {
                             borderRadius: 4,
-                            backgroundColor: 'grey.200',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                            },
-                          }}
-                        />
-                      </Box>
+                          },
+                        }}
+                      />
+                    </Box>
 
-                      <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                            {currentIDP.goals.length}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Total Goals
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
-                            {currentIDP.goals.filter(g => g.status === 'completed').length}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Completed
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                
-                <Grid item xs={12} md={8}>
-                  <Card>
-                    <CardContent sx={{ p: 3 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                        Development Goals
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {currentIDP.goals.slice(0, 3).map((goal) => (
-                          <Box
-                            key={goal.id}
-                            sx={{
-                              p: 2,
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              borderRadius: 1,
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                {goal.competencyName}
-                              </Typography>
-                              <Chip
-                                label={goal.priority}
-                                size="small"
-                                color={goal.priority === 'high' ? 'error' : goal.priority === 'medium' ? 'warning' : 'success'}
-                                variant="outlined"
-                              />
-                            </Box>
-                            
-                            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                              {goal.currentLevel} → {goal.targetLevel}
-                            </Typography>
-                            
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Typography variant="body2" color="text.secondary">
-                                Progress: {goal.progress}%
-                              </Typography>
-                              <Chip
-                                label={goal.status.replace('_', ' ')}
-                                size="small"
-                                color={goal.status === 'completed' ? 'success' : goal.status === 'in_progress' ? 'primary' : 'default'}
-                                variant="outlined"
-                              />
-                            </Box>
-                          </Box>
-                        ))}
-                        
-                        {currentIDP.goals.length > 3 && (
-                          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
-                            +{currentIDP.goals.length - 3} more goals
-                          </Typography>
-                        )}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                      <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                          {currentIDP.goals.length}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Total Goals
+                        </Typography>
                       </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+                      <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
+                          {currentIDP.goals.filter(g => g.status === 'completed').length}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Completed
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                      Development Goals
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {currentIDP.goals.slice(0, 3).map((goal) => (
+                        <Box
+                          key={goal.id}
+                          sx={{
+                            p: 2,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                              {goal.competencyName}
+                            </Typography>
+                            <Chip
+                              label={goal.priority}
+                              size="small"
+                              color={goal.priority === 'high' ? 'error' : goal.priority === 'medium' ? 'warning' : 'success'}
+                              variant="outlined"
+                            />
+                          </Box>
+                          
+                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                            {goal.currentLevel} → {goal.targetLevel}
+                          </Typography>
+                          
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="body2" color="text.secondary">
+                              Progress: {goal.progress}%
+                            </Typography>
+                            <Chip
+                              label={goal.status.replace('_', ' ')}
+                              size="small"
+                              color={goal.status === 'completed' ? 'success' : goal.status === 'in_progress' ? 'primary' : 'default'}
+                              variant="outlined"
+                            />
+                          </Box>
+                        </Box>
+                      ))}
+                      
+                      {currentIDP.goals.length > 3 && (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
+                          +{currentIDP.goals.length - 3} more goals
+                        </Typography>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Box>
             </Box>
           )
         }
@@ -390,7 +382,7 @@ export const IDPPage: React.FC = () => {
         </Fab>
       )}
 
-      {/* Gap Analysis Wizard Dialog */}
+      {/* Gap Analysis Dialog */}
       <Dialog
         open={showGapAnalysis}
         onClose={() => setShowGapAnalysis(false)}
@@ -399,11 +391,8 @@ export const IDPPage: React.FC = () => {
         fullScreen={window.innerWidth < 768}
       >
         <DialogContent sx={{ p: 0 }}>
-          <GapAnalysisWizard
-            onComplete={(competencies) => {
-              console.log('Gap analysis completed:', competencies)
-              handleGapAnalysisComplete()
-            }}
+          <GapAnalysisUpload
+            onComplete={handleGapAnalysisComplete}
             onCancel={() => setShowGapAnalysis(false)}
           />
         </DialogContent>
@@ -412,7 +401,7 @@ export const IDPPage: React.FC = () => {
   )
 }
 
-// IDP Overview Component
+// IDP Overview Component (restored from previous UI)
 const IDPOverview: React.FC = () => {
   const { gapAnalysis, currentIDP } = useIDPStore()
   
@@ -547,6 +536,216 @@ const IDPOverview: React.FC = () => {
           </Box>
         </motion.div>
       )}
+    </Box>
+  )
+}
+
+// New Gap Analysis Upload Component (integrated into the previous UI design)
+const GapAnalysisUpload: React.FC<{
+  onComplete: () => void
+  onCancel: () => void
+}> = ({ onComplete, onCancel }) => {
+  const [frameworkFile, setFrameworkFile] = useState<File | null>(null)
+  const [employeeFile, setEmployeeFile] = useState<File | null>(null)
+  const { performGapAnalysis, isAnalyzing, analysisProgress } = useIDPStore()
+
+  const onDropFramework = (acceptedFiles: File[]) => {
+    setFrameworkFile(acceptedFiles[0])
+  }
+
+  const onDropEmployee = (acceptedFiles: File[]) => {
+    setEmployeeFile(acceptedFiles[0])
+  }
+
+  const { getRootProps: getFrameworkRootProps, getInputProps: getFrameworkInputProps, isDragActive: isFrameworkDragActive } = useDropzone({ 
+    onDrop: onDropFramework,
+    accept: {
+      'application/json': ['.json'],
+      'text/csv': ['.csv'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/msword': ['.doc']
+    }
+  })
+  
+  const { getRootProps: getEmployeeRootProps, getInputProps: getEmployeeInputProps, isDragActive: isEmployeeDragActive } = useDropzone({ 
+    onDrop: onDropEmployee,
+    accept: {
+      'application/json': ['.json'],
+      'text/csv': ['.csv'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/msword': ['.doc']
+    }
+  })
+
+  const handleSubmit = async () => {
+    if (frameworkFile && employeeFile) {
+      try {
+        await performGapAnalysis({ frameworkFile, employeeFile })
+        onComplete()
+      } catch (error) {
+        console.error('Gap analysis failed:', error)
+      }
+    }
+  }
+
+  if (isAnalyzing) {
+    return (
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <AnalysisIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+        <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+          Analyzing Competency Gaps
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          We're processing your framework and employee data to identify development opportunities.
+        </Typography>
+        <LinearProgress 
+          variant="determinate" 
+          value={analysisProgress} 
+          sx={{ 
+            height: 8, 
+            borderRadius: 4,
+            mb: 2,
+            '& .MuiLinearProgress-bar': {
+              borderRadius: 4,
+            },
+          }} 
+        />
+        <Typography variant="body2" color="text.secondary">
+          {analysisProgress}% Complete
+        </Typography>
+      </Box>
+    )
+  }
+
+  return (
+    <Box sx={{ p: 4 }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+        Competency Gap Analysis
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+        Upload your competency framework and employee assessment files to identify skill gaps and development opportunities.
+      </Typography>
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+        <Card>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              Framework File
+            </Typography>
+            
+            <Box
+              {...getFrameworkRootProps()}
+              sx={{
+                border: '2px dashed',
+                borderColor: isFrameworkDragActive ? 'primary.main' : frameworkFile ? 'success.main' : 'grey.300',
+                borderRadius: 2,
+                p: 3,
+                textAlign: 'center',
+                cursor: 'pointer',
+                bgcolor: isFrameworkDragActive ? 'primary.50' : frameworkFile ? 'success.50' : 'grey.50',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: 'primary.50',
+                },
+              }}
+            >
+              <input {...getFrameworkInputProps()} />
+              <UploadIcon sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+              {frameworkFile ? (
+                <>
+                  <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
+                    {frameworkFile.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {(frameworkFile.size / 1024).toFixed(1)} KB
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
+                    Drop framework file here, or click to browse
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Supports JSON, CSV, Excel, PDF, DOCX files
+                  </Typography>
+                </>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              Employee Assessment File
+            </Typography>
+            
+            <Box
+              {...getEmployeeRootProps()}
+              sx={{
+                border: '2px dashed',
+                borderColor: isEmployeeDragActive ? 'primary.main' : employeeFile ? 'success.main' : 'grey.300',
+                borderRadius: 2,
+                p: 3,
+                textAlign: 'center',
+                cursor: 'pointer',
+                bgcolor: isEmployeeDragActive ? 'primary.50' : employeeFile ? 'success.50' : 'grey.50',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: 'primary.50',
+                },
+              }}
+            >
+              <input {...getEmployeeInputProps()} />
+              <UploadIcon sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+              {employeeFile ? (
+                <>
+                  <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
+                    {employeeFile.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {(employeeFile.size / 1024).toFixed(1)} KB
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
+                    Drop employee file here, or click to browse
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Supports JSON, CSV, Excel, PDF, DOCX files
+                  </Typography>
+                </>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
+        <Button
+          variant="outlined"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={!frameworkFile || !employeeFile}
+          startIcon={<AnalysisIcon />}
+        >
+          Start Analysis
+        </Button>
+      </Box>
     </Box>
   )
 } 
