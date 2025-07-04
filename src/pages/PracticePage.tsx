@@ -10,6 +10,7 @@ import {
 } from '@mui/material'
 import { usePracticeStore } from '@/store/practiceStore'
 import { ScenarioCard } from '@/components/practice/ScenarioCard'
+import { ContinueSessionCard } from '@/components/practice/ContinueSessionCard'
 import { Loading } from '@/components/common/Loading'
 import { EmptyState } from '@/components/common/EmptyState'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
@@ -66,13 +67,14 @@ const MOCK_SCENARIOS = [
 ]
 
 export const PracticePage: React.FC = () => {
-  const { scenarios, isLoadingScenarios, fetchScenarios } = usePracticeStore()
+  const { scenarios, isLoadingScenarios, fetchScenarios, activeRoleplaySession, fetchActiveSession } = usePracticeStore()
   const [search, setSearch] = useState('')
   const [difficulty, setDifficulty] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchScenarios().catch(() => setError('Failed to load scenarios.'))
+    fetchActiveSession()
   }, [])
 
   const handleFilterChange = () => {
@@ -83,6 +85,9 @@ export const PracticePage: React.FC = () => {
 
   return (
     <Box sx={{ py: 4 }}>
+      {activeRoleplaySession && (
+        <ContinueSessionCard activeSession={activeRoleplaySession} />
+      )}
       <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
         Practice Scenarios
       </Typography>

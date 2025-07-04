@@ -9,6 +9,8 @@ import {
 } from '@/services/practice'
 import { wsService } from '@/services/websocket'
 import { offlineQueueService, QueuedMessage } from '@/services/offlineQueue'
+import { apiClient } from '@/services/api'
+import { API_ENDPOINTS } from '@/utils/constants'
 
 // Define the expected API response types
 type RoleplayScenarioData = Omit<RoleplayScenario, 'id'> & {
@@ -51,6 +53,7 @@ interface PracticeState {
   
   // Sessions
   currentSession: RoleplaySession | null
+  activeRoleplaySession: RoleplaySession | null
   messages: SessionMessage[]
   isSessionActive: boolean
   isLoadingSession: boolean
@@ -71,7 +74,8 @@ interface PracticeState {
     limit?: number
   }) => Promise<void>
   selectScenario: (scenarioId: string) => Promise<void>
-  startSession: (scenarioId: string) => Promise<void>
+  startSession: (scenarioId: string) => Promise<string | void>
+  fetchActiveSession: () => Promise<void>
   sendMessage: (message: string) => Promise<void>
   endSession: () => Promise<void>
   clearSession: () => void
@@ -86,6 +90,7 @@ export const usePracticeStore = create<PracticeState>()(
     currentScenario: null,
     isLoadingScenarios: false,
     currentSession: null,
+    activeRoleplaySession: null,
     messages: [],
     isSessionActive: false,
     isLoadingSession: false,
@@ -137,7 +142,8 @@ export const usePracticeStore = create<PracticeState>()(
           success: boolean; 
           data: { 
             sessionId: string
-            initialMessage: string
+            initialMessage?: string
+            isOngoing?: boolean
           } 
         }
         
@@ -152,13 +158,13 @@ export const usePracticeStore = create<PracticeState>()(
           
           set({ 
             currentSession: session,
-            messages: [{
+            messages: response.data.initialMessage ? [{
               id: 'initial',
               sessionId: response.data.sessionId,
               sender: 'ai',
               content: response.data.initialMessage,
               timestamp: new Date().toISOString()
-            }],
+            }] : [],
             isSessionActive: true,
             isLoadingSession: false,
             sessionEvaluation: null
@@ -166,11 +172,31 @@ export const usePracticeStore = create<PracticeState>()(
           
           // Join WebSocket room for real-time updates
           wsService.joinSessionRoom(response.data.sessionId)
+
+          return response.data.sessionId
         }
       } catch (error) {
         console.error('Failed to start session:', error)
         set({ isLoadingSession: false })
         throw error
+      }
+    },
+
+    fetchActiveSession: async () => {
+      try {
+        const response = await apiClient.get(`${API_ENDPOINTS.PRACTICE.SESSIONS}/active`) as {
+          success: boolean;
+          data: { session?: RoleplaySession };
+        }
+
+        if (response.success && response.data.session) {
+          set({ activeRoleplaySession: response.data.session })
+        } else {
+          set({ activeRoleplaySession: null })
+        }
+      } catch (error) {
+        console.error('Failed to fetch active roleplay session:', error)
+        set({ activeRoleplaySession: null })
       }
     },
 

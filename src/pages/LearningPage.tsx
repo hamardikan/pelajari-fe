@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLearningStore } from '@/store/learningStore'
 import { DocumentUpload } from '@/components/learning/DocumentUpload'
+import { OngoingModulesSection } from '@/components/learning/OngoingModulesSection'
 import { Button } from '@/components/common/Button'
 
 // Mock Module Card Component for now
@@ -64,11 +65,14 @@ export const LearningPage: React.FC = () => {
     isLoadingModules,
     fetchModules,
     setFilters,
+    ongoingModules,
+    fetchOngoingModules,
   } = useLearningStore()
 
   useEffect(() => {
     fetchModules()
-  }, [fetchModules])
+    fetchOngoingModules()
+  }, [fetchModules, fetchOngoingModules])
 
   const handleSearch = (value: string) => {
     setFilters({ search: value })
@@ -92,6 +96,11 @@ export const LearningPage: React.FC = () => {
 
   return (
     <Box>
+      {/* Ongoing Modules Section */}
+      {ongoingModules.length > 0 && (
+        <OngoingModulesSection ongoingModules={ongoingModules} />
+      )}
+
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>

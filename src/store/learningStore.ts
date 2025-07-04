@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { learningService, LearningModule, UserProgress } from '@/services/learning'
+import { apiClient } from '@/services/api'
+import { API_ENDPOINTS } from '@/utils/constants'
 import { wsService } from '@/services/websocket'
 
 interface LearningState {
@@ -11,6 +13,7 @@ interface LearningState {
   
   // Progress
   userProgress: UserProgress[]
+  ongoingModules: UserProgress[]
   isLoadingProgress: boolean
   
   // Filters
@@ -41,6 +44,7 @@ interface LearningState {
   }) => Promise<{ moduleId: string }>
   submitAssessment: (moduleId: string, answers: string[]) => Promise<unknown>
   submitEvaluation: (moduleId: string, questionIndex: number, response: string) => Promise<unknown>
+  fetchOngoingModules: () => Promise<void>
   clearCurrentModule: () => void
 }
 
@@ -69,6 +73,7 @@ export const useLearningStore = create<LearningState>()(
     currentModule: null,
     isLoadingModules: false,
     userProgress: [],
+    ongoingModules: [],
     isLoadingProgress: false,
     filters: {
       search: '',
@@ -226,6 +231,21 @@ export const useLearningStore = create<LearningState>()(
       } catch (error) {
         console.error('Failed to submit evaluation:', error)
         throw error
+      }
+    },
+
+    fetchOngoingModules: async () => {
+      try {
+        const response = await apiClient.get(`${API_ENDPOINTS.LEARNING.PROGRESS}/ongoing`) as {
+          success: boolean;
+          data: { progressList: UserProgress[] }
+        }
+
+        if (response.success) {
+          set({ ongoingModules: response.data.progressList })
+        }
+      } catch (error) {
+        console.error('Failed to fetch ongoing modules:', error)
       }
     },
 

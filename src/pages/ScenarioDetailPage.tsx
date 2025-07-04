@@ -30,8 +30,8 @@ export const ScenarioDetailPage: React.FC = () => {
   const handleStart = async () => {
     if (!currentScenario) return
     try {
-      await startSession(currentScenario.id)
-      navigate(`/practice/sessions/${currentScenario.id}`)
+      const sessionId = await startSession(currentScenario.id)
+      navigate(`/practice/sessions/${sessionId || currentScenario.id}`)
     } catch (e) {
       console.error(e)
     }

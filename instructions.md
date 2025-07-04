@@ -1,181 +1,216 @@
-# Frontend Update Guide - IDP One-Shot Generation
+Instruction Manual: Peningkatan Fitur "Lanjutkan Aktivitas" (Frontend)
+Tujuan Utama
+Mengintegrasikan alur "Lanjutkan Sesi" (untuk Roleplay) dan "Lanjutkan Belajar" (untuk Learning) yang lebih lancar ke dalam frontend (React dengan Zustand dan Material-UI), berdasarkan perubahan backend yang telah disiapkan.
 
-## 🚨 Backend Changes Summary
+Konteks Kode Frontend Saat Ini
+State Management: Aplikasi menggunakan Zustand untuk state management global.
 
-The IDP gap analysis endpoint now performs **one-shot generation** - it automatically creates gap analysis, 9-box mapping, AND the complete IDP in a single API call.
+store/practiceStore.ts untuk fitur Roleplay (Practice).
 
----
+store/learningStore.ts untuk fitur Learning.
 
-## 📡 API Changes Required
+Struktur Halaman: Halaman utama fitur berada di src/pages.
 
-### 1. **Updated Response Format**
+Roleplay: src/pages/PracticePage.tsx.
 
-The `POST /api/idp/gap-analysis` endpoint now returns **both IDs**:
+Learning: src/pages/LearningPage.tsx.
 
-**Before:**
-```json
-{
-  "success": true,
-  "message": "Gap analysis initiated successfully",
-  "data": {
-    "analysisId": "uuid",
-    "status": "completed",
-    "message": "Gap analysis completed successfully"
-  }
-}
-```
+Komponen Relevan:
 
-**After:**
-```json
-{
-  "success": true,
-  "message": "Gap analysis and IDP generation initiated successfully",
-  "data": {
-    "analysisId": "uuid",
-    "idpId": "uuid",          // ← NEW! 
-    "status": "completed",
-    "message": "Gap analysis and IDP generation completed successfully"
-  }
-}
-```
+src/components/dashboard/ContinueLearning.tsx: Komponen ini sudah ada dan berfungsi untuk melanjutkan modul belajar di halaman dashboard. Logikanya sangat mirip dengan yang dibutuhkan di halaman Learning.
 
-### 2. **Update Your API Service**
+API Service: Semua panggilan API diatur melalui src/services/api.ts dan konstanta endpoint ada di src/utils/constants.ts.
 
-```javascript
-// Update your gap analysis service to expect both IDs
-export const analyzeCompetencyGaps = async (frameworkFile, employeeFile, employeeId) => {
-  // ... existing FormData logic ...
-  
-  const result = await response.json();
-  
-  return {
-    analysisId: result.data.analysisId,
-    idpId: result.data.idpId,        // ← Handle this new field
-    status: result.data.status,
-    message: result.data.message
-  };
-};
-```
+Tahap 1: Penyempurnaan Frontend Fitur Roleplay (Practice)
+Tujuan: Memungkinkan pengguna melanjutkan sesi roleplay yang aktif langsung dari halaman utama fitur (PracticePage.tsx).
 
----
+Langkah 1.1: Buat Komponen ContinueSessionCard
+Buat sebuah komponen UI baru yang akan muncul di bagian atas halaman PracticePage.tsx jika ada sesi roleplay yang aktif.
 
-## 🔄 Flow Changes Required
+Buat File Komponen Baru:
 
-### 1. **Simplified User Flow**
+Buat file di src/components/practice/ContinueSessionCard.tsx.
 
-**Old Flow:**
-```
-Upload Files → Gap Analysis → 9-Box Mapping → IDP Generation
-    ↓              ↓              ↓              ↓
-  Step 1         Step 2         Step 3         Step 4
-```
+Komponen ini akan menerima activeSession sebagai prop.
 
-**New Flow:**
-```
-Upload Files → Complete IDP Generated ✅
-    ↓              ↓
-  Step 1      Everything Done!
-```
+Rancang UI Komponen:
 
-### 2. **Remove These API Calls**
+Gunakan Card dari Material-UI.
 
-You **no longer need** to call these endpoints after gap analysis:
-- ❌ `POST /api/idp/employees/{employeeId}/nine-box` 
-- ❌ `POST /api/idp/generate/{employeeId}`
+Tampilkan judul skenario dari activeSession.scenarioTitle (asumsi properti ini ada).
 
-They happen automatically now!
+Tampilkan informasi seperti "Sesi aktif dimulai pada [timestamp]".
 
-### 3. **Update UI States**
+Buat Button utama dengan teks "Lanjutkan Sesi". Tombol ini akan mengarahkan pengguna ke halaman sesi.
 
-```javascript
-// Instead of managing 3 separate states:
-const [gapAnalysisState, setGapAnalysisState] = useState();
-const [nineBoxState, setNineBoxState] = useState();
-const [idpState, setIdpState] = useState();
+Langkah 1.2: Integrasi ke Halaman Practice (PracticePage.tsx)
+State Management di usePracticeStore (store/practiceStore.ts):
 
-// Just manage one:
-const [idpGenerationState, setIdpGenerationState] = useState({
-  status: 'idle', // 'idle' | 'processing' | 'completed' | 'error'
-  analysisId: null,
-  idpId: null
-});
-```
+Tambahkan state baru untuk menyimpan sesi aktif: activeRoleplaySession: RoleplaySession | null = null;.
 
----
+Tambahkan action baru fetchActiveSession:
 
-## ✅ What You Need to Change
+TypeScript
 
-### 1. **Update Gap Analysis Handler**
-```javascript
-const handleGapAnalysis = async (frameworkFile, employeeFile) => {
-  setIdpGenerationState({ status: 'processing' });
-  
+fetchActiveSession: async () => {
   try {
-    const result = await analyzeCompetencyGaps(frameworkFile, employeeFile);
-    
-    // Now you get BOTH IDs immediately!
-    setIdpGenerationState({
-      status: 'completed',
-      analysisId: result.analysisId,
-      idpId: result.idpId           // ← Use this to navigate to IDP
-    });
-    
-    // Navigate to IDP view or show success message
-    navigate(`/idp/view/${result.idpId}`);
-    
+    // Asumsi endpoint baru ini ada, sesuai instruksi awal
+    const response = await apiClient.get('/api/roleplay/sessions/active');
+    if (response.success && response.data.session) {
+      set({ activeRoleplaySession: response.data.session });
+    } else {
+      set({ activeRoleplaySession: null });
+    }
   } catch (error) {
-    setIdpGenerationState({ status: 'error', error });
+    console.error('Failed to fetch active roleplay session:', error);
+    set({ activeRoleplaySession: null });
   }
-};
-```
+},
+Panggil fetchActiveSession di PracticePage.tsx:
 
-### 2. **Update Success UI**
-```jsx
-{status === 'completed' && (
-  <div className="success-summary">
-    <h3>🎉 Complete IDP Generated!</h3>
-    <div className="action-buttons">
-      <button onClick={() => navigate(`/gap-analysis/${analysisId}`)}>
-        View Gap Analysis
-      </button>
-      <button onClick={() => navigate(`/idp/${idpId}`)} className="primary">
-        View Development Plan
-      </button>
-    </div>
-  </div>
+Di dalam useEffect pada PracticePage.tsx, panggil action fetchActiveSession yang baru dibuat saat komponen dimuat.
+
+TypeScript
+
+const { fetchScenarios, fetchActiveSession, activeRoleplaySession } = usePracticeStore();
+
+useEffect(() => {
+  fetchScenarios();
+  fetchActiveSession(); // Panggil di sini
+}, [fetchScenarios, fetchActiveSession]);
+Render Komponen secara Kondisional:
+
+Di dalam PracticePage.tsx, impor ContinueSessionCard.
+
+Render komponen ini di bagian atas halaman, hanya jika activeRoleplaySession tidak null.
+
+TypeScript
+
+{activeRoleplaySession && (
+  <ContinueSessionCard activeSession={activeRoleplaySession} />
 )}
-```
+Langkah 1.3: Modifikasi Alur "Mulai Sesi"
+Perbarui logika pada startSession di store/practiceStore.ts untuk menangani jika sesi sudah ada.
 
-### 3. **Update Loading Messages**
-```jsx
-{status === 'processing' && (
-  <div className="loading">
-    <h3>Generating Complete IDP...</h3>
-    <p>Creating gap analysis, 9-box mapping, and development plan...</p>
-    {/* Show unified progress instead of separate steps */}
-  </div>
-)}
-```
+Update startSession di usePracticeStore:
 
----
+Backend POST /api/roleplay/scenarios/:scenarioId/start sekarang akan mengembalikan isOngoing: true jika ada sesi aktif.
 
-## 🎯 Benefits for Users
+Modifikasi action startSession untuk menangani respons ini.
 
-- **Faster**: One upload vs. multiple steps
-- **Simpler**: No workflow management needed
-- **Consistent**: All data generated together
-- **Reliable**: No partial states or failures between steps
+TypeScript
 
----
+startSession: async (scenarioId: string) => {
+  try {
+    // ... (logika loading state)
+    const response = await practiceService.startSession(scenarioId);
 
-## 🚨 Migration Notes
+    // Jika backend mengembalikan sesi yang sudah ada
+    if (response.success && response.data.isOngoing) {
+      const session: RoleplaySession = {
+        id: response.data.sessionId,
+        // ... (sisa data sesi)
+      };
+      set({
+        currentSession: session,
+        isSessionActive: true,
+        // ...
+      });
+      // Langsung arahkan ke halaman sesi
+      // (Navigasi akan ditangani di komponen/halaman yang memanggil action ini)
+      return session.id;
+    }
 
-- **Existing IDPs**: Still work the same way
-- **Standalone endpoints**: `POST /idp/generate/{employeeId}` still exists for edge cases
-- **Backward compatibility**: All existing read endpoints unchanged
+    // ... (logika untuk memulai sesi baru seperti biasa)
 
----
+  } catch (error) {
+    // ... (error handling)
+  }
+},
+Tahap 2: Penyempurnaan Frontend Fitur Learning
+Tujuan: Menyediakan bagian "Sedang Dipelajari" (In Progress) di halaman LearningPage.tsx.
 
-## ❓ Questions?
+Langkah 2.1: Adaptasi dan Pindahkan Logika ContinueLearning
+Komponen src/components/dashboard/ContinueLearning.tsx sudah memiliki logika yang hampir sempurna. Kita akan memodifikasinya menjadi komponen yang lebih umum dan menampilkannya di LearningPage.tsx.
 
-The backend changes are **live and ready**. Test the endpoint and you'll see it now returns both `analysisId` and `idpId` in a single call! 
+State Management di useLearningStore (store/learningStore.ts):
+
+Buat state baru: ongoingModules: UserProgress[] = [];.
+
+Buat action baru fetchOngoingModules untuk memanggil endpoint GET /api/learning/progress/ongoing.
+
+TypeScript
+
+fetchOngoingModules: async () => {
+  try {
+    const response = await apiClient.get('/api/learning/progress/ongoing');
+    if (response.success) {
+      set({ ongoingModules: response.data.progressList });
+    }
+  } catch (error) {
+    console.error('Failed to fetch ongoing modules:', error);
+  }
+},
+Buat Komponen OngoingModulesSection:
+
+Buat file baru src/components/learning/OngoingModulesSection.tsx.
+
+Pindahkan dan adaptasi logika dari ContinueLearning.tsx. Komponen ini akan menerima ongoingModules sebagai prop.
+
+Render setiap item sebagai card yang menampilkan:
+
+Judul modul.
+
+LinearProgress dari Material-UI untuk visualisasi progres (completionPercentage).
+
+Teks "Terakhir diakses: [timestamp]".
+
+Tombol "Lanjutkan Belajar" yang mengarahkan ke halaman detail modul.
+
+Integrasi ke LearningPage.tsx:
+
+Panggil fetchOngoingModules dari useEffect di LearningPage.tsx.
+
+TypeScript
+
+const { modules, fetchModules, ongoingModules, fetchOngoingModules } = useLearningStore();
+
+useEffect(() => {
+  fetchModules();
+  fetchOngoingModules();
+}, [fetchModules, fetchOngoingModules]);
+Render OngoingModulesSection di bagian atas halaman jika ongoingModules.length > 0.
+
+Langkah 2.2: Pastikan lastAccessedAt Selalu Terbaru
+Pastikan interaksi pengguna di dalam halaman detail modul (ModuleDetailPage.tsx) memicu pembaruan lastAccessedAt.
+
+Verifikasi updateProgress di ModuleDetailPage.tsx:
+
+File src/pages/ModuleDetailPage.tsx sudah memiliki useEffect yang memanggil updateProgress secara berkala.
+
+Pastikan panggilan ke updateProgress di dalam handleSectionComplete dan useEffect sudah mengirim semua data yang diperlukan agar backend dapat memperbarui lastAccessedAt. Logika yang ada saat ini sudah memadai.
+
+Tahap 3: (Opsional) Notifikasi Global
+Tujuan: Memberi tahu pengguna tentang aktivitas yang belum selesai setelah mereka login.
+
+Pemeriksaan Saat Aplikasi Dimuat:
+
+Di komponen App.tsx, di dalam hook useWebSocket atau useEffect utama, setelah pengguna terautentikasi (isAuthenticated adalah true).
+
+Panggil action fetchActiveSession dari usePracticeStore dan fetchOngoingModules dari useLearningStore.
+
+Manajemen State Notifikasi:
+
+Buat store Zustand baru (misal: store/notificationStore.ts) atau tambahkan ke store yang sudah ada.
+
+State ini akan menyimpan informasi apakah ada sesi/modul yang aktif, contoh: hasPendingActivities: boolean.
+
+Tampilkan Notifikasi:
+
+Gunakan react-hot-toast yang sudah terintegrasi di App.tsx.
+
+Buat useEffect yang memantau perubahan pada activeRoleplaySession dan ongoingModules.
+
+Jika salah satunya berisi data, panggil toast.custom() atau toast.success() dengan pesan: "Anda memiliki aktivitas yang belum selesai. Lanjutkan?"
+
+Buat agar notifikasi tersebut bisa diklik dan mengarahkan pengguna ke halaman yang relevan (/practice atau /learning).
